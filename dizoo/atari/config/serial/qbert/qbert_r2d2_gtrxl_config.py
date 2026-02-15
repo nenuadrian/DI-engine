@@ -63,6 +63,13 @@ qbert_r2d2_gtrxl_config = dict(
             )
         ),
     ),
+    wandb_logger=dict(
+        gradient_logger=True,
+        video_logger=True,
+        plot_logger=True,
+        action_logger=True,
+        return_logger=False,
+    ),
 )
 qbert_r2d2_gtrxl_config = EasyDict(qbert_r2d2_gtrxl_config)
 main_config = qbert_r2d2_gtrxl_config

@@ -69,6 +69,13 @@ pong_r2d2_gtrxl_config = dict(
             )
         ),
     ),
+    wandb_logger=dict(
+        gradient_logger=True,
+        video_logger=True,
+        plot_logger=True,
+        action_logger=True,
+        return_logger=False,
+    ),
 )
 pong_r2d2_gtrxl_config = EasyDict(pong_r2d2_gtrxl_config)
 main_config = pong_r2d2_gtrxl_config

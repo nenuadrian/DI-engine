@@ -58,6 +58,13 @@ cartpole_r2d2_gtrxl_config = dict(
             ), replay_buffer=dict(replay_buffer_size=100000, )
         ),
     ),
+    wandb_logger=dict(
+        gradient_logger=True,
+        video_logger=True,
+        plot_logger=True,
+        action_logger=True,
+        return_logger=False,
+    ),
 )
 cartpole_r2d2_gtrxl_config = EasyDict(cartpole_r2d2_gtrxl_config)
 main_config = cartpole_r2d2_gtrxl_config

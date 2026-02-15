@@ -66,6 +66,13 @@ lunarlander_r2d2_gtrxl_config = dict(
             )
         ),
     ),
+    wandb_logger=dict(
+        gradient_logger=True,
+        video_logger=True,
+        plot_logger=True,
+        action_logger=True,
+        return_logger=False,
+    ),
 )
 lunarlander_r2d2_gtrxl_config = EasyDict(lunarlander_r2d2_gtrxl_config)
 main_config = lunarlander_r2d2_gtrxl_config

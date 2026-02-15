@@ -48,6 +48,13 @@ memory_len_r2d2_gtrxl_config = dict(
             replay_buffer=dict(replay_buffer_size=50000, ),
         ),
     ),
+    wandb_logger=dict(
+        gradient_logger=True,
+        video_logger=True,
+        plot_logger=True,
+        action_logger=True,
+        return_logger=False,
+    ),
 )
 memory_len_r2d2_gtrxl_config = EasyDict(memory_len_r2d2_gtrxl_config)
 main_config = memory_len_r2d2_gtrxl_config

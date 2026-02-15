@@ -381,7 +381,9 @@ class R2D2GTrXLPolicy(Policy):
         self._collect_model.eval()
         with torch.no_grad():
             output = self._collect_model.forward(data, eps=eps, data_id=data_id)
-        del output['input_seq']
+        # These keys are sequence-major (seq_len first) and cannot be decollated by env batch dimension.
+        output.pop('input_seq', None)
+        output.pop('transformer_out', None)
         if self._cuda:
             output = to_device(output, 'cpu')
         output = default_decollate(output)
@@ -458,6 +460,9 @@ class R2D2GTrXLPolicy(Policy):
         self._eval_model.eval()
         with torch.no_grad():
             output = self._eval_model.forward(data, data_id=data_id)
+        # These keys are sequence-major (seq_len first) and cannot be decollated by env batch dimension.
+        output.pop('input_seq', None)
+        output.pop('transformer_out', None)
         if self._cuda:
             output = to_device(output, 'cpu')
         output = default_decollate(output)

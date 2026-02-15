@@ -13,6 +13,7 @@ from ding.config import read_config, compile_config
 from ding.policy import create_policy, PolicyFactory
 from ding.reward_model import create_reward_model
 from ding.utils import set_pkg_seed, get_rank
+from .utils import maybe_init_wandb, maybe_finish_wandb
 
 
 def serial_pipeline_onpolicy(
@@ -68,6 +69,7 @@ def serial_pipeline_onpolicy(
     policy = create_policy(cfg.policy, model=model, enable_field=['learn', 'collect', 'eval', 'command'])
 
     # Create worker components: learner, collector, evaluator, replay buffer, commander.
+    wandb_run = maybe_init_wandb(cfg) if get_rank() == 0 else None
     tb_logger = SummaryWriter(os.path.join('./{}/log/'.format(cfg.exp_name), 'serial')) if get_rank() == 0 else None
     learner = BaseLearner(cfg.policy.learn.learner, policy.learn_mode, tb_logger, exp_name=cfg.exp_name)
     collector = create_serial_collector(
@@ -123,4 +125,6 @@ def serial_pipeline_onpolicy(
             'finish_time': time.ctime(),
         }
         pickle.dump(final_data, f)
+    if get_rank() == 0:
+        maybe_finish_wandb(wandb_run)
     return policy

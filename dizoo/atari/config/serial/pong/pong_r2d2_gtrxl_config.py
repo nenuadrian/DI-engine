@@ -70,6 +70,8 @@ pong_r2d2_gtrxl_config = dict(
         ),
     ),
     wandb_logger=dict(
+        enabled=True,
+        sync_tensorboard=True,
         gradient_logger=True,
         video_logger=True,
         plot_logger=True,

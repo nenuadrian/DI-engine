@@ -61,6 +61,8 @@ pendulum_vmpo_gtrxl_config = dict(
         eval=dict(evaluator=dict(eval_freq=200, )),
     ),
     wandb_logger=dict(
+        enabled=True,
+        sync_tensorboard=True,
         gradient_logger=True,
         video_logger=True,
         plot_logger=True,

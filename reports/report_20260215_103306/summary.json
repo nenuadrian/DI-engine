@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-02-15T10:33:15.998157",
+  "base_dir": "/Users/user/Desktop/DI-engine",
+  "report_dir": "/Users/user/Desktop/DI-engine/reports/report_20260215_103306",
+  "runs": [],
+  "max_scores": {
+    "pendulum": {
+      "r2d2": null,
+      "vmpo": null
+    },
+    "pong": {
+      "r2d2": null,
+      "vmpo": null
+    },
+    "spaceinvaders": {
+      "r2d2": null,
+      "vmpo": null
+    }
+  }
+}

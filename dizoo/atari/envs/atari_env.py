@@ -91,11 +91,14 @@ class AtariEnv(BaseEnv):
         return self._reward_space
 
     def _make_env(self):
+        # With gym's RecordVideo wrapper, setting render_mode prevents legacy render(mode=...) calls.
+        render_mode = 'rgb_array' if self._replay_path is not None else None
         return wrap_deepmind(
             self._cfg.env_id,
             frame_stack=self._cfg.frame_stack,
             episode_life=self._cfg.is_train,
-            clip_rewards=self._cfg.is_train
+            clip_rewards=self._cfg.is_train,
+            render_mode=render_mode
         )
 
     def __repr__(self) -> str:
@@ -137,9 +140,11 @@ class AtariEnvMR(AtariEnv):
         return obs
 
     def _make_env(self):
+        render_mode = 'rgb_array' if self._replay_path is not None else None
         return wrap_deepmind_mr(
             self._cfg.env_id,
             frame_stack=self._cfg.frame_stack,
             episode_life=self._cfg.is_train,
-            clip_rewards=self._cfg.is_train
+            clip_rewards=self._cfg.is_train,
+            render_mode=render_mode
         )

@@ -11,7 +11,9 @@ from ding.utils.compression_helper import jpeg_data_compressor
 import cv2
 
 
-def wrap_deepmind(env_id, episode_life=True, clip_rewards=True, frame_stack=4, scale=True, warp_frame=True):
+def wrap_deepmind(
+        env_id, episode_life=True, clip_rewards=True, frame_stack=4, scale=True, warp_frame=True, render_mode=None
+):
     """Configure environment for DeepMind-style Atari. The observation is
     channel-first: (c, h, w) instead of (h, w, c).
 
@@ -24,7 +26,14 @@ def wrap_deepmind(env_id, episode_life=True, clip_rewards=True, frame_stack=4, s
     :return: the wrapped atari environment.
     """
     #assert 'NoFrameskip' in env_id
-    env = gym.make(env_id)
+    if render_mode is None:
+        env = gym.make(env_id)
+    else:
+        try:
+            env = gym.make(env_id, render_mode=render_mode)
+        except TypeError:
+            # Backward compatibility for gym versions/environments without render_mode argument.
+            env = gym.make(env_id)
     env = NoopResetWrapper(env, noop_max=30)
     env = MaxAndSkipWrapper(env, skip=4)
     if episode_life:
@@ -42,7 +51,9 @@ def wrap_deepmind(env_id, episode_life=True, clip_rewards=True, frame_stack=4, s
     return env
 
 
-def wrap_deepmind_mr(env_id, episode_life=True, clip_rewards=True, frame_stack=4, scale=True, warp_frame=True):
+def wrap_deepmind_mr(
+        env_id, episode_life=True, clip_rewards=True, frame_stack=4, scale=True, warp_frame=True, render_mode=None
+):
     """Configure environment for DeepMind-style Atari. The observation is
     channel-first: (c, h, w) instead of (h, w, c).
 
@@ -55,7 +66,14 @@ def wrap_deepmind_mr(env_id, episode_life=True, clip_rewards=True, frame_stack=4
     :return: the wrapped atari environment.
     """
     assert 'MontezumaRevenge' in env_id
-    env = gym.make(env_id)
+    if render_mode is None:
+        env = gym.make(env_id)
+    else:
+        try:
+            env = gym.make(env_id, render_mode=render_mode)
+        except TypeError:
+            # Backward compatibility for gym versions/environments without render_mode argument.
+            env = gym.make(env_id)
     env = NoopResetWrapper(env, noop_max=30)
     env = MaxAndSkipWrapper(env, skip=4)
     if episode_life:

@@ -5,6 +5,7 @@ from ditk import logging
 import platform
 import time
 import copy
+import errno
 import gymnasium
 import gym
 import traceback
@@ -305,6 +306,11 @@ class AsyncSubprocessEnvManager(BaseEnvManager):
                 reset_fn()
                 return
             except BaseException as e:
+                # During teardown, reset threads may race with ``close`` and hit closed pipes.
+                if self._closed and isinstance(e, (OSError, EOFError, BrokenPipeError, ConnectionResetError)):
+                    return
+                if isinstance(e, OSError) and getattr(e, 'errno', None) == errno.EBADF and self._closed:
+                    return
                 logging.info("subprocess exception traceback: \n" + traceback.format_exc())
                 if self._retry_type == 'renew' or isinstance(e, pickle.UnpicklingError):
                     self._pipe_parents[env_id].close()
@@ -632,11 +638,17 @@ class AsyncSubprocessEnvManager(BaseEnvManager):
             return
         self._closed = True
         for _, p in self._pipe_parents.items():
-            p.send(['close', None, None])
-        for env_id, p in self._pipe_parents.items():
-            if not p.poll(5):
+            try:
+                p.send(['close', None, None])
+            except (OSError, EOFError, BrokenPipeError):
                 continue
-            p.recv()
+        for env_id, p in self._pipe_parents.items():
+            try:
+                if not p.poll(5):
+                    continue
+                p.recv()
+            except (OSError, EOFError, BrokenPipeError):
+                continue
         for i in range(self._env_num):
             self._env_states[i] = EnvState.VOID
         # disable process join for avoiding hang
@@ -645,7 +657,10 @@ class AsyncSubprocessEnvManager(BaseEnvManager):
         for _, p in self._subprocesses.items():
             p.terminate()
         for _, p in self._pipe_parents.items():
-            p.close()
+            try:
+                p.close()
+            except OSError:
+                continue
 
     @staticmethod
     def wait(rest_conn: list, wait_num: int, timeout: Optional[float] = None) -> Tuple[list, list]:

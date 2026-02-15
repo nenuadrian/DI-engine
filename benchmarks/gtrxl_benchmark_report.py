@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-Aggregate local GTrXL benchmark logs into a timestamped markdown report.
-
-Expected runs:
-- pendulum_r2d2_gtrxl_seed*
-- pong_r2d2_gtrxl_seed*
-- spaceinvaders_r2d2_gtrxl_seed*
-- pendulum_vmpo_gtrxl_seed*
-- pong_vmpo_gtrxl_seed*
-- spaceinvaders_vmpo_gtrxl_seed*
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -26,7 +14,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 ENV_ORDER = ("pendulum", "pong", "spaceinvaders")
-ALGO_ORDER = ("r2d2", "vmpo")
+ALGO_ORDER = ("r2d2", "vmpo", "ppo")
 
 ENV_LABEL = {
     "pendulum": "Pendulum",
@@ -37,6 +25,7 @@ ENV_LABEL = {
 ALGO_LABEL = {
     "r2d2": "R2D2-GTrXL",
     "vmpo": "VMPO-GTrXL",
+    "ppo": "PPO-GTrXL",
 }
 
 RUN_SPECS = (
@@ -46,6 +35,9 @@ RUN_SPECS = (
     {"env": "pendulum", "algo": "vmpo", "prefix": "pendulum_vmpo_gtrxl_seed"},
     {"env": "pong", "algo": "vmpo", "prefix": "pong_vmpo_gtrxl_seed"},
     {"env": "spaceinvaders", "algo": "vmpo", "prefix": "spaceinvaders_vmpo_gtrxl_seed"},
+    {"env": "pendulum", "algo": "ppo", "prefix": "pendulum_ppo_gtrxl_seed"},
+    {"env": "pong", "algo": "ppo", "prefix": "pong_ppo_gtrxl_seed"},
+    {"env": "spaceinvaders", "algo": "ppo", "prefix": "spaceinvaders_ppo_gtrxl_seed"},
 )
 
 LOG_RELATIVE_PATHS = (
@@ -80,7 +72,9 @@ class AggregateCurve:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate a GTrXL benchmark report from local logs.")
+    parser = argparse.ArgumentParser(
+        description="Generate a GTrXL benchmark report from local logs."
+    )
     parser.add_argument(
         "--base-dir",
         type=Path,
@@ -108,7 +102,9 @@ def _parse_float(text: str) -> Optional[float]:
         return None
 
 
-def _normalize_points(points: Iterable[Tuple[float, float]]) -> List[Tuple[float, float]]:
+def _normalize_points(
+    points: Iterable[Tuple[float, float]],
+) -> List[Tuple[float, float]]:
     by_iter: Dict[float, float] = {}
     for train_iter, reward in points:
         if train_iter is None or reward is None:
@@ -192,7 +188,8 @@ def parse_evaluator_points(log_path: Path) -> List[Tuple[float, float]]:
 
     if not points:
         fallback = re.compile(
-            r"Train Iter\(([-+0-9.eE]+)\)\s*.*?Eval Return\(([-+0-9.eE]+)\)", re.IGNORECASE
+            r"Train Iter\(([-+0-9.eE]+)\)\s*.*?Eval Return\(([-+0-9.eE]+)\)",
+            re.IGNORECASE,
         )
         for match in fallback.finditer(text):
             train_iter = _parse_float(match.group(1))
@@ -247,7 +244,9 @@ def _format_iter(train_iter: Optional[float]) -> str:
     return f"{train_iter:,.3f}"
 
 
-def best_score_and_iter(runs: Sequence[RunLog]) -> Tuple[Optional[float], Optional[float]]:
+def best_score_and_iter(
+    runs: Sequence[RunLog],
+) -> Tuple[Optional[float], Optional[float]]:
     best_score: Optional[float] = None
     best_iter: Optional[float] = None
     for run in runs:
@@ -280,7 +279,9 @@ def create_plot(
     except Exception as exc:  # pragma: no cover - runtime dependency issue
         return None, f"Plot skipped: matplotlib unavailable ({exc})."
 
-    fig, axes = plt.subplots(len(ENV_ORDER), 1, figsize=(10, 3.8 * len(ENV_ORDER)), squeeze=False)
+    fig, axes = plt.subplots(
+        len(ENV_ORDER), 1, figsize=(10, 3.8 * len(ENV_ORDER)), squeeze=False
+    )
 
     for idx, env in enumerate(ENV_ORDER):
         ax = axes[idx][0]
@@ -306,7 +307,14 @@ def create_plot(
         if has_data:
             ax.legend(loc="best")
         else:
-            ax.text(0.5, 0.5, "No logs found", ha="center", va="center", transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                "No logs found",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
 
     axes[-1][0].set_xlabel("Train iteration (time proxy)")
     fig.tight_layout()
@@ -338,7 +346,9 @@ def build_readme(
     lines.append("## Score Over Time")
     lines.append("")
     lines.append("X-axis uses train iteration as a time-weighted proxy.")
-    lines.append("Each line is the seed-aggregated mean evaluator reward for one algorithm.")
+    lines.append(
+        "Each line is the seed-aggregated mean evaluator reward for one algorithm."
+    )
     lines.append("")
     if plot_path is not None:
         lines.append(f"![Score over time]({plot_path.name})")
@@ -348,21 +358,21 @@ def build_readme(
     lines.append("")
     lines.append("## Max Score by Algorithm")
     lines.append("")
-    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL |")
-    lines.append("| --- | ---: | ---: |")
+    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL | PPO-GTrXL |")
+    lines.append("| --- | ---: | ---: | ---: |")
     for env in ENV_ORDER:
         lines.append(
-            f"| {ENV_LABEL[env]} | {_format_score(max_scores[env]['r2d2'])} | {_format_score(max_scores[env]['vmpo'])} |"
+            f"| {ENV_LABEL[env]} | {_format_score(max_scores[env]['r2d2'])} | {_format_score(max_scores[env]['vmpo'])} | {_format_score(max_scores[env]['ppo'])} |"
         )
 
     lines.append("")
     lines.append("## Iterations to Reach Best Score")
     lines.append("")
-    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL |")
-    lines.append("| --- | ---: | ---: |")
+    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL | PPO-GTrXL |")
+    lines.append("| --- | ---: | ---: | ---: |")
     for env in ENV_ORDER:
         lines.append(
-            f"| {ENV_LABEL[env]} | {_format_iter(best_iters[env]['r2d2'])} | {_format_iter(best_iters[env]['vmpo'])} |"
+            f"| {ENV_LABEL[env]} | {_format_iter(best_iters[env]['r2d2'])} | {_format_iter(best_iters[env]['vmpo'])} | {_format_iter(best_iters[env]['ppo'])} |"
         )
 
     lines.append("")
@@ -379,7 +389,15 @@ def build_readme(
     lines.append("## Parsed Logs")
     lines.append("")
     if run_logs:
-        for run in sorted(run_logs, key=lambda r: (r.env, r.algo, r.seed if r.seed is not None else -1, str(r.path))):
+        for run in sorted(
+            run_logs,
+            key=lambda r: (
+                r.env,
+                r.algo,
+                r.seed if r.seed is not None else -1,
+                str(r.path),
+            ),
+        ):
             seed_str = f"seed={run.seed}" if run.seed is not None else "seed=unknown"
             lines.append(
                 f"- `{run.path.resolve()}` ({ENV_LABEL[run.env]}, {ALGO_LABEL[run.algo]}, {seed_str}, points={len(run.points)})"
@@ -425,7 +443,9 @@ def main() -> None:
                 )
             )
 
-    grouped_runs: Dict[str, Dict[str, List[RunLog]]] = {env: {algo: [] for algo in ALGO_ORDER} for env in ENV_ORDER}
+    grouped_runs: Dict[str, Dict[str, List[RunLog]]] = {
+        env: {algo: [] for algo in ALGO_ORDER} for env in ENV_ORDER
+    }
     for run in run_logs:
         grouped_runs[run.env][run.algo].append(run)
 
@@ -441,7 +461,16 @@ def main() -> None:
             best_iters[env][algo] = best_iter
 
     plot_path, plot_note = create_plot(report_dir, curves)
-    readme_text = build_readme(report_dir, base_dir, run_logs, curves, max_scores, best_iters, plot_path, plot_note)
+    readme_text = build_readme(
+        report_dir,
+        base_dir,
+        run_logs,
+        curves,
+        max_scores,
+        best_iters,
+        plot_path,
+        plot_note,
+    )
     (report_dir / "README.md").write_text(readme_text, encoding="utf-8")
 
     json_summary = {
@@ -463,7 +492,9 @@ def main() -> None:
         "max_scores": max_scores,
         "best_score_iters": best_iters,
     }
-    (report_dir / "summary.json").write_text(json.dumps(json_summary, indent=2), encoding="utf-8")
+    (report_dir / "summary.json").write_text(
+        json.dumps(json_summary, indent=2), encoding="utf-8"
+    )
 
     print(f"Report created: {report_dir}")
     print(f"README: {report_dir / 'README.md'}")

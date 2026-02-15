@@ -239,6 +239,28 @@ def _format_score(score: Optional[float]) -> str:
     return "N/A" if score is None else f"{score:.3f}"
 
 
+def _format_iter(train_iter: Optional[float]) -> str:
+    if train_iter is None:
+        return "N/A"
+    if abs(train_iter - round(train_iter)) < 1e-9:
+        return f"{int(round(train_iter)):,}"
+    return f"{train_iter:,.3f}"
+
+
+def best_score_and_iter(runs: Sequence[RunLog]) -> Tuple[Optional[float], Optional[float]]:
+    best_score: Optional[float] = None
+    best_iter: Optional[float] = None
+    for run in runs:
+        for train_iter, reward in run.points:
+            if best_score is None or reward > best_score:
+                best_score = reward
+                best_iter = train_iter
+            elif best_score is not None and abs(reward - best_score) < 1e-12:
+                if best_iter is None or train_iter < best_iter:
+                    best_iter = train_iter
+    return best_score, best_iter
+
+
 def create_plot(
     output_dir: Path,
     curves: Dict[str, Dict[str, AggregateCurve]],
@@ -301,6 +323,7 @@ def build_readme(
     run_logs: Sequence[RunLog],
     curves: Dict[str, Dict[str, AggregateCurve]],
     max_scores: Dict[str, Dict[str, Optional[float]]],
+    best_iters: Dict[str, Dict[str, Optional[float]]],
     plot_path: Optional[Path],
     plot_note: Optional[str],
 ) -> str:
@@ -330,6 +353,16 @@ def build_readme(
     for env in ENV_ORDER:
         lines.append(
             f"| {ENV_LABEL[env]} | {_format_score(max_scores[env]['r2d2'])} | {_format_score(max_scores[env]['vmpo'])} |"
+        )
+
+    lines.append("")
+    lines.append("## Iterations to Reach Best Score")
+    lines.append("")
+    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL |")
+    lines.append("| --- | ---: | ---: |")
+    for env in ENV_ORDER:
+        lines.append(
+            f"| {ENV_LABEL[env]} | {_format_iter(best_iters[env]['r2d2'])} | {_format_iter(best_iters[env]['vmpo'])} |"
         )
 
     lines.append("")
@@ -398,20 +431,17 @@ def main() -> None:
 
     curves: Dict[str, Dict[str, AggregateCurve]] = {env: {} for env in ENV_ORDER}
     max_scores: Dict[str, Dict[str, Optional[float]]] = {env: {} for env in ENV_ORDER}
+    best_iters: Dict[str, Dict[str, Optional[float]]] = {env: {} for env in ENV_ORDER}
     for env in ENV_ORDER:
         for algo in ALGO_ORDER:
             runs = grouped_runs[env][algo]
             curves[env][algo] = aggregate_curves(runs)
-            max_value: Optional[float] = None
-            for run in runs:
-                if run.max_score is None:
-                    continue
-                if max_value is None or run.max_score > max_value:
-                    max_value = run.max_score
-            max_scores[env][algo] = max_value
+            best_score, best_iter = best_score_and_iter(runs)
+            max_scores[env][algo] = best_score
+            best_iters[env][algo] = best_iter
 
     plot_path, plot_note = create_plot(report_dir, curves)
-    readme_text = build_readme(report_dir, base_dir, run_logs, curves, max_scores, plot_path, plot_note)
+    readme_text = build_readme(report_dir, base_dir, run_logs, curves, max_scores, best_iters, plot_path, plot_note)
     (report_dir / "README.md").write_text(readme_text, encoding="utf-8")
 
     json_summary = {
@@ -431,6 +461,7 @@ def main() -> None:
             for run in run_logs
         ],
         "max_scores": max_scores,
+        "best_score_iters": best_iters,
     }
     (report_dir / "summary.json").write_text(json.dumps(json_summary, indent=2), encoding="utf-8")
 

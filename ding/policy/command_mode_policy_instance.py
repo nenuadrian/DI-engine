@@ -14,6 +14,7 @@ from .r2d2_gtrxl import R2D2GTrXLPolicy
 from .r2d2_collect_traj import R2D2CollectTrajPolicy
 from .sqn import SQNPolicy
 from .ppo import PPOPolicy, PPOOffPolicy, PPOPGPolicy, PPOSTDIMPolicy
+from .vmpo import VMPOPolicy
 from .offppo_collect_traj import OffPPOCollectTrajPolicy
 from .ppg import PPGPolicy, PPGOffPolicy
 from .pg import PGPolicy
@@ -186,6 +187,11 @@ class SQLCommandModePolicy(SQLPolicy, EpsCommandModePolicy):
 
 @POLICY_REGISTRY.register('ppo_command')
 class PPOCommandModePolicy(PPOPolicy, DummyCommandModePolicy):
+    pass
+
+
+@POLICY_REGISTRY.register('vmpo_command')
+class VMPOCommandModePolicy(VMPOPolicy, DummyCommandModePolicy):
     pass
 
 

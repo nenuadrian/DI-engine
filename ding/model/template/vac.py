@@ -7,6 +7,7 @@ from ding.utils import SequenceType, squeeze, MODEL_REGISTRY
 from ..common import ReparameterizationHead, RegressionHead, DiscreteHead, MultiHead, \
     FCEncoder, ConvEncoder, IMPALAConvEncoder
 from ding.torch_utils.network.dreamer import ActionHead, DenseHead
+from ding.torch_utils.network.gtrxl import GTrXL
 
 
 @MODEL_REGISTRY.register('vac')
@@ -378,6 +379,270 @@ class VAC(nn.Module):
             x = self.actor_head(actor_embedding)
             return {'logit': x, 'value': value}
         elif self.action_space == 'hybrid':
+            action_type = self.actor_head[0](actor_embedding)
+            action_args = self.actor_head[1](actor_embedding)
+            return {'logit': {'action_type': action_type['logit'], 'action_args': action_args}, 'value': value}
+
+
+@MODEL_REGISTRY.register('gtrxl_vac')
+class GTrXLVAC(nn.Module):
+    """
+    Overview:
+        VAC-style actor-critic model with a GTrXL core.
+        This model is intended for policies (e.g., VMPO/PPO variants) that use the VAC interfaces:
+        ``compute_actor``, ``compute_critic``, ``compute_actor_critic``.
+
+    Notes:
+        - By default, this model is used with ``memory_len=0`` in on-policy pipelines, where sequence state is
+          not tracked per environment in the policy.
+        - It still runs observation features through GTrXL layers at every forward call.
+    """
+    mode = ['compute_actor', 'compute_critic', 'compute_actor_critic']
+
+    def __init__(
+        self,
+        obs_shape: Union[int, SequenceType],
+        action_shape: Union[int, SequenceType, EasyDict],
+        action_space: str = 'discrete',
+        encoder_hidden_size_list: SequenceType = [128, 512, 1024],
+        hidden_size: int = 1024,
+        actor_head_hidden_size: int = 1024,
+        actor_head_layer_num: int = 1,
+        critic_head_hidden_size: int = 1024,
+        critic_head_layer_num: int = 1,
+        att_head_dim: int = 16,
+        att_head_num: int = 8,
+        att_mlp_num: int = 2,
+        att_layer_num: int = 3,
+        memory_len: int = 0,
+        dropout: float = 0.,
+        gru_gating: bool = True,
+        gru_bias: float = 2.,
+        activation: Optional[nn.Module] = nn.ReLU(),
+        norm_type: Optional[str] = None,
+        sigma_type: Optional[str] = 'independent',
+        fixed_sigma_value: Optional[int] = 0.3,
+        bound_type: Optional[str] = None,
+        encoder: Optional[torch.nn.Module] = None,
+    ) -> None:
+        super(GTrXLVAC, self).__init__()
+        obs_shape = squeeze(obs_shape)
+        action_shape = squeeze(action_shape)
+        self.obs_shape, self.action_shape = obs_shape, action_shape
+        self.action_space = action_space
+        assert self.action_space in ['discrete', 'continuous', 'hybrid'], self.action_space
+
+        # Observation encoder (vector -> FC, image -> Conv), then projection to GTrXL embedding size.
+        if encoder is not None:
+            if not isinstance(encoder, torch.nn.Module):
+                raise ValueError("illegal encoder instance.")
+            self.encoder = encoder
+            encoder_out_dim = hidden_size
+        else:
+            if isinstance(obs_shape, int) or len(obs_shape) == 1:
+                self.encoder = FCEncoder(
+                    obs_shape=obs_shape,
+                    hidden_size_list=encoder_hidden_size_list,
+                    activation=activation,
+                    norm_type=norm_type
+                )
+            elif len(obs_shape) == 3:
+                self.encoder = ConvEncoder(
+                    obs_shape=obs_shape,
+                    hidden_size_list=encoder_hidden_size_list,
+                    activation=activation,
+                    norm_type=norm_type
+                )
+            else:
+                raise RuntimeError(
+                    "not support obs_shape for pre-defined encoder: {}, please customize your own encoder".format(
+                        obs_shape
+                    )
+                )
+            encoder_out_dim = encoder_hidden_size_list[-1]
+
+        self.encoder_proj = nn.Identity() if encoder_out_dim == hidden_size else nn.Linear(encoder_out_dim, hidden_size)
+
+        # GTrXL over encoded features.
+        self.core = GTrXL(
+            input_dim=hidden_size,
+            head_dim=att_head_dim,
+            embedding_dim=hidden_size,
+            head_num=att_head_num,
+            mlp_num=att_mlp_num,
+            layer_num=att_layer_num,
+            memory_len=memory_len,
+            dropout_ratio=dropout,
+            activation=activation,
+            gru_gating=gru_gating,
+            gru_bias=gru_bias,
+            use_embedding_layer=False,
+        )
+
+        # Separate projections for actor/critic heads.
+        self.actor_proj = nn.Identity() if actor_head_hidden_size == hidden_size else nn.Linear(
+            hidden_size, actor_head_hidden_size
+        )
+        self.critic_proj = nn.Identity() if critic_head_hidden_size == hidden_size else nn.Linear(
+            hidden_size, critic_head_hidden_size
+        )
+
+        self.critic_head = RegressionHead(
+            critic_head_hidden_size,
+            1,
+            critic_head_layer_num,
+            activation=activation,
+            norm_type=norm_type,
+            hidden_size=critic_head_hidden_size
+        )
+
+        if self.action_space == 'continuous':
+            self.multi_head = False
+            self.actor_head = ReparameterizationHead(
+                actor_head_hidden_size,
+                action_shape,
+                actor_head_layer_num,
+                sigma_type=sigma_type,
+                fixed_sigma_value=fixed_sigma_value,
+                activation=activation,
+                norm_type=norm_type,
+                bound_type=bound_type,
+                hidden_size=actor_head_hidden_size,
+            )
+        elif self.action_space == 'discrete':
+            self.multi_head = not isinstance(action_shape, int)
+            if self.multi_head:
+                self.actor_head = MultiHead(
+                    DiscreteHead,
+                    actor_head_hidden_size,
+                    action_shape,
+                    layer_num=actor_head_layer_num,
+                    activation=activation,
+                    norm_type=norm_type
+                )
+            else:
+                self.actor_head = DiscreteHead(
+                    actor_head_hidden_size,
+                    action_shape,
+                    actor_head_layer_num,
+                    activation=activation,
+                    norm_type=norm_type
+                )
+        else:  # hybrid
+            action_shape.action_args_shape = squeeze(action_shape.action_args_shape)
+            action_shape.action_type_shape = squeeze(action_shape.action_type_shape)
+            actor_action_args = ReparameterizationHead(
+                actor_head_hidden_size,
+                action_shape.action_args_shape,
+                actor_head_layer_num,
+                sigma_type=sigma_type,
+                fixed_sigma_value=fixed_sigma_value,
+                activation=activation,
+                norm_type=norm_type,
+                bound_type=bound_type,
+                hidden_size=actor_head_hidden_size,
+            )
+            actor_action_type = DiscreteHead(
+                actor_head_hidden_size,
+                action_shape.action_type_shape,
+                actor_head_layer_num,
+                activation=activation,
+                norm_type=norm_type,
+            )
+            self.actor_head = nn.ModuleList([actor_action_type, actor_action_args])
+
+    def reset(self, *args, **kwargs) -> None:
+        # Keep compatibility with model wrappers that call model.reset().
+        state = kwargs.get('state', None)
+        batch_size = kwargs.get('batch_size', None)
+        if state is not None:
+            self.core.reset_memory(state=state)
+        elif batch_size is not None:
+            self.core.reset_memory(batch_size=batch_size)
+        else:
+            # Defer memory initialization to the next forward with actual batch size.
+            self.core.memory = None
+
+    def _encode_core(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Encode observations, run GTrXL, and return feature tensor.
+        Returns shape:
+            - (B, D) for batched observations
+            - (T, B, D) for sequence observations
+        """
+        if isinstance(self.obs_shape, int) or len(self.obs_shape) == 1:
+            obs_dims = 1
+        else:
+            obs_dims = 3
+
+        leading_shape = x.shape[:-obs_dims]
+        x_flat = x.reshape(-1, *x.shape[-obs_dims:])
+        enc = self.encoder(x_flat)
+        enc = self.encoder_proj(enc)
+        enc = enc.reshape(*leading_shape, -1)
+
+        if enc.dim() == 2:
+            seq_in = enc.unsqueeze(0)  # (1, B, D)
+            core_out = self.core(seq_in)['logit'].squeeze(0)  # (B, D)
+        elif enc.dim() == 3:
+            core_out = self.core(enc)['logit']  # (T, B, D)
+        else:
+            raise RuntimeError(f"Unsupported encoded tensor rank {enc.dim()} for GTrXLVAC.")
+        return core_out
+
+    def forward(self, x: torch.Tensor, mode: str) -> Dict:
+        assert mode in self.mode, "not support forward mode: {}/{}".format(mode, self.mode)
+        return getattr(self, mode)(x)
+
+    def compute_actor(self, x: Union[torch.Tensor, Dict]) -> Dict:
+        if isinstance(x, dict):
+            action_mask = x['action_mask']
+            obs = x['observation']
+        else:
+            action_mask = None
+            obs = x
+
+        actor_embedding = self.actor_proj(self._encode_core(obs))
+        if self.action_space == 'discrete':
+            result = {'logit': self.actor_head(actor_embedding)['logit']}
+            if action_mask is not None:
+                result['action_mask'] = action_mask
+            return result
+        elif self.action_space == 'continuous':
+            return {'logit': self.actor_head(actor_embedding)}
+        else:
+            action_type = self.actor_head[0](actor_embedding)
+            action_args = self.actor_head[1](actor_embedding)
+            return {'logit': {'action_type': action_type['logit'], 'action_args': action_args}}
+
+    def compute_critic(self, x: Union[torch.Tensor, Dict]) -> Dict:
+        obs = x['observation'] if isinstance(x, dict) else x
+        critic_embedding = self.critic_proj(self._encode_core(obs))
+        value = self.critic_head(critic_embedding)['pred']
+        return {'value': value}
+
+    def compute_actor_critic(self, x: Union[torch.Tensor, Dict]) -> Dict:
+        if isinstance(x, dict):
+            action_mask = x['action_mask']
+            obs = x['observation']
+        else:
+            action_mask = None
+            obs = x
+
+        core_embedding = self._encode_core(obs)
+        actor_embedding = self.actor_proj(core_embedding)
+        critic_embedding = self.critic_proj(core_embedding)
+        value = self.critic_head(critic_embedding)['pred']
+
+        if self.action_space == 'discrete':
+            logit = self.actor_head(actor_embedding)['logit']
+            result = {'logit': logit, 'value': value}
+            if action_mask is not None:
+                result['action_mask'] = action_mask
+            return result
+        elif self.action_space == 'continuous':
+            return {'logit': self.actor_head(actor_embedding), 'value': value}
+        else:
             action_type = self.actor_head[0](actor_embedding)
             action_args = self.actor_head[1](actor_embedding)
             return {'logit': {'action_type': action_type['logit'], 'action_args': action_args}, 'value': value}

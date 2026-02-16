@@ -1433,3 +1433,5 @@ ding/framework/middleware/tests/wandb/
 ding/.style.yapf
 ding/format.sh
 ding/framework/middleware_v3/
+
+jobs

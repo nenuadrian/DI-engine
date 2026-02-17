@@ -68,6 +68,26 @@ def _default_wandb_run_name(cfg: "EasyDict") -> str:  # noqa
     return f"{algo}_{env}_{timestamp}"
 
 
+def _to_wandb_config(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _to_wandb_config(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_to_wandb_config(v) for v in value]
+    if isinstance(value, bytes):
+        try:
+            return value.decode("utf-8")
+        except Exception:
+            return str(value)
+    if hasattr(value, "item") and callable(getattr(value, "item")):
+        try:
+            return _to_wandb_config(value.item())
+        except Exception:
+            pass
+    return str(value)
+
+
 def maybe_init_wandb(cfg: "EasyDict") -> Optional[Any]:  # noqa
     """
     Overview:
@@ -98,6 +118,8 @@ def maybe_init_wandb(cfg: "EasyDict") -> Optional[Any]:  # noqa
         reinit=True,
         dir=wandb_dir,
     )
+    if wandb_cfg.get("log_config", True):
+        init_kwargs["config"] = _to_wandb_config(cfg)
     if entity:
         init_kwargs["entity"] = entity
     if wandb_cfg.get("group", None) is not None:

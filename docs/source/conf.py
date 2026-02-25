@@ -15,7 +15,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 autoapi_type = "python"
 autoapi_dirs = [
     str(REPO_ROOT / "ding"),
-    str(REPO_ROOT / "dizoo"),
 ]
 autoapi_ignore = [
     "*/tests/*",

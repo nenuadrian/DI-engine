@@ -52,9 +52,9 @@ def _render_source_section(source_path: Path) -> str:
         '<section class="source-with-latex">'
         '<h2>Full Source Code</h2>'
         f'<p class="source-path">{file_label}</p>'
-        '<div class="source-block"><pre>'
+        '<div class="source-block"><div class="source-code">'
         f"{code_html}"
-        "</pre></div>"
+        "</div></div>"
         "</section>"
     )
 

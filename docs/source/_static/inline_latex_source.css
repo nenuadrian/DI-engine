@@ -15,7 +15,8 @@
   background: #f8fafc;
 }
 
-.source-with-latex .source-block pre {
+.source-with-latex .source-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   margin: 0;
   padding: 0.95rem 1rem;
   line-height: 1.35;

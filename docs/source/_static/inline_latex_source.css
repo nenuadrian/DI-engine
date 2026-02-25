@@ -9,17 +9,16 @@
 }
 
 .source-with-latex .source-block {
-  max-height: 80vh;
-  overflow: auto;
+  overflow: visible;
   border: 1px solid #d7d7d7;
   border-radius: 6px;
-  background: #f7f7f7;
+  background: #f8fafc;
 }
 
 .source-with-latex .source-block pre {
   margin: 0;
-  padding: 0.8rem 0.9rem;
-  line-height: 1.4;
+  padding: 0.95rem 1rem;
+  line-height: 1.35;
   font-size: 0.82rem;
 }
 
@@ -30,7 +29,7 @@
 
 .source-with-latex .lineno {
   display: inline-block;
-  width: 4.5em;
+  width: 4.2em;
   margin-right: 0.8em;
   color: #9b9b9b;
   user-select: none;
@@ -38,6 +37,6 @@
 }
 
 .source-with-latex .latex-inline {
-  color: #0b3d91;
-  font-style: italic;
+  color: #0a3a88;
+  font-weight: 500;
 }

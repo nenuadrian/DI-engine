@@ -38,11 +38,12 @@ autoapi_options = [
 
 html_theme = "alabaster"
 html_static_path = ["_static"]
+mathjax_path = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
 
-# Allow MathJax processing inside <pre>/<code> blocks so inline formulas from
-# "# Latex:" comments can be rendered in the generated source blocks.
+# Keep default skipped HTML tags (including pre/code), and explicitly process
+# only spans marked with class "mathjax-process".
 mathjax3_config = {
     "options": {
-        "skipHtmlTags": ["script", "noscript", "style", "textarea", "annotation", "annotation-xml"],
+        "processHtmlClass": "mathjax-process",
     }
 }

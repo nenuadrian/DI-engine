@@ -31,7 +31,7 @@ def _render_line(line: str) -> str:
 
     prefix = escape(line[:marker_pos])
     formula = escape(line[marker_pos + len(marker) :].strip())
-    return f'{prefix}<span class="latex-inline">\\({formula}\\)</span>'
+    return f'{prefix}<span class="latex-inline mathjax-process">\\({formula}\\)</span>'
 
 
 def _render_source_section(source_path: Path) -> str:
@@ -45,7 +45,9 @@ def _render_source_section(source_path: Path) -> str:
         )
 
     file_label = escape(str(source_path))
-    code_html = "\n".join(rendered_lines)
+    # Avoid newline text nodes between block spans in <pre>, which can create
+    # visual blank lines in some themes.
+    code_html = "".join(rendered_lines)
     return (
         '<section class="source-with-latex">'
         '<h2>Full Source Code</h2>'
@@ -70,4 +72,5 @@ def _inject_source_block(app: Sphinx, pagename: str, templatename: str, context:
 def setup(app: Sphinx) -> dict:
     app.connect("html-page-context", _inject_source_block)
     app.add_css_file("inline_latex_source.css")
+    app.add_js_file("inline_latex_source.js")
     return {"version": "0.1", "parallel_read_safe": True, "parallel_write_safe": True}

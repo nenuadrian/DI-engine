@@ -156,7 +156,9 @@ class VMPOPolicy(PPOPolicy):
                     valid_mask = torch.ones_like(valid_mask, dtype=torch.bool)
                     sample_weight = torch.ones_like(sample_weight)
 
+                # Latex: \eta = \mathrm{softplus}(\theta_\eta), \quad \eta > 0
                 eta = self._positive(self._log_eta)
+                # Latex: \tilde{A}_i = A_i / \eta
                 scaled_adv = adv / eta
 
                 with torch.no_grad():
@@ -173,6 +175,7 @@ class VMPOPolicy(PPOPolicy):
                 selected_weight = sample_weight[selected_mask]
 
                 # E-step dual update for eta.
+                # Latex: \mathcal{L}_\eta = \eta \left( \epsilon_\eta + \log\left(\frac{1}{\sum_i w_i}\sum_i w_i \exp(A_i/\eta)\right)\right)
                 selected_scaled_det = (adv.detach() / eta)[selected_mask]
                 max_scaled = selected_scaled_det.max().detach()
                 exp_scaled = torch.exp(selected_scaled_det - max_scaled) * selected_weight
@@ -189,6 +192,7 @@ class VMPOPolicy(PPOPolicy):
                     eta_det = self._positive(self._log_eta).detach()
 
                 # Fixed VMPO policy weights for selected samples.
+                # Latex: q_i = \frac{w_i \exp(A_i/\eta)}{\sum_j w_j \exp(A_j/\eta)}
                 selected_scaled = (adv.detach() / eta_det)[selected_mask]
                 max_selected_scaled = selected_scaled.max()
                 unnormalized_w = torch.exp(selected_scaled - max_selected_scaled) * selected_weight
@@ -197,14 +201,18 @@ class VMPOPolicy(PPOPolicy):
                 action = batch['action'].long().reshape(-1)
                 new_log_prob_all = F.log_softmax(logits, dim=-1)
                 new_log_prob_action = new_log_prob_all.gather(1, action.unsqueeze(-1)).squeeze(-1)
+                # Latex: \mathcal{L}_{\pi,\text{NLL}} = -\sum_i q_i \log \pi_\theta(a_i \mid s_i)
                 policy_nll = -(weights * new_log_prob_action[selected_mask]).sum()
 
                 old_log_prob_all = F.log_softmax(old_logits, dim=-1)
                 old_prob_all = old_log_prob_all.exp()
+                # Latex: D_{\mathrm{KL}}(\pi_{\text{old}} \| \pi_\theta) = \sum_a \pi_{\text{old}}(a \mid s)\left[\log \pi_{\text{old}}(a \mid s)-\log \pi_\theta(a \mid s)\right]
                 kl_all = (old_prob_all * (old_log_prob_all - new_log_prob_all)).sum(dim=-1)
                 kl_selected = (kl_all[selected_mask] * selected_weight).sum() / sum_selected_weight
 
+                # Latex: \alpha = \mathrm{softplus}(\theta_\alpha), \quad \alpha > 0
                 alpha = self._positive(self._log_alpha)
+                # Latex: \mathcal{L}_\alpha = \alpha \left(\epsilon_{\mathrm{KL}} - \bar{D}_{\mathrm{KL}}\right)
                 alpha_loss = alpha * (self._epsilon_kl - kl_selected.detach())
                 self._alpha_optimizer.zero_grad()
                 alpha_loss.backward()
@@ -213,17 +221,22 @@ class VMPOPolicy(PPOPolicy):
                 with torch.no_grad():
                     alpha_det = self._positive(self._log_alpha).detach()
 
+                # Latex: \mathcal{L}_\pi = \mathcal{L}_{\pi,\text{NLL}} + \alpha \bar{D}_{\mathrm{KL}}
                 policy_loss = policy_nll + alpha_det * kl_selected
 
                 value_pred = output['value'].reshape(-1)
                 value_target = batch['return'].reshape(-1).detach()
+                # Latex: \mathcal{L}_V = \frac{1}{2}\frac{\sum_i w_i\left(V_\phi(s_i)-R_i\right)^2}{\sum_i w_i}
                 value_loss = 0.5 * ((value_pred - value_target).pow(2) * sample_weight).sum() / (
                     sample_weight.sum() + 1e-8
                 )
 
+                # Latex: \mathcal{H}(\pi_\theta(\cdot \mid s)) = -\sum_a \pi_\theta(a \mid s)\log \pi_\theta(a \mid s)
                 entropy_all = -(new_log_prob_all.exp() * new_log_prob_all).sum(dim=-1)
+                # Latex: \mathcal{L}_H = \frac{\sum_i w_i \mathcal{H}(\pi_\theta(\cdot \mid s_i))}{\sum_i w_i}
                 entropy_loss = (entropy_all * sample_weight).sum() / (sample_weight.sum() + 1e-8)
 
+                # Latex: \mathcal{L}_{\text{total}} = \mathcal{L}_\pi + c_v \mathcal{L}_V - c_e \mathcal{L}_H
                 total_loss = policy_loss + self._value_weight * value_loss - self._entropy_weight * entropy_loss
 
                 self._optimizer.zero_grad()

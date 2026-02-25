@@ -17,8 +17,10 @@ WORKERS_COMMAND := $(if ${WORKERS},-n ${WORKERS} --dist=loadscope,)
 DURATIONS         ?= 10
 DURATIONS_COMMAND := $(if ${DURATIONS},--durations=${DURATIONS},)
 
+.PHONY: docs unittest algotest cudatest envpooltest dockertest platformtest benchmark test cpu_test all_test format format_test flake_check
+
 docs:
-	$(MAKE) -C ${DING_DIR}/docs html
+	$(MAKE) -C docs html
 
 unittest:
 	pytest ${TEST_DIR} \

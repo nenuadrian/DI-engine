@@ -1,6 +1,6 @@
 site_name: DI-engine API Documentation
 site_description: API reference generated from source code.
-repo_url: https://github.com/opendilab/DI-engine
+repo_url: https://github.com/nenuadrian/DI-engine
 
 docs_dir: content
 site_dir: _build/html

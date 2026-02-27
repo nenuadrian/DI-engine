@@ -1,11 +1,14 @@
-.PHONY: html clean
+.PHONY: html clean serve
 
-SPHINXBUILD ?= sphinx-build
-SOURCEDIR   = source
-BUILDDIR    = _build
+MKDOCS ?= mkdocs
+BUILDDIR = _build
+CONFIG_FILE = mkdocs.yml
 
 html:
-	$(SPHINXBUILD) -b html $(SOURCEDIR) $(BUILDDIR)/html
+	$(MKDOCS) build --strict --config-file $(CONFIG_FILE) --site-dir $(BUILDDIR)/html
+
+serve:
+	$(MKDOCS) serve --config-file $(CONFIG_FILE)
 
 clean:
 	rm -rf $(BUILDDIR)

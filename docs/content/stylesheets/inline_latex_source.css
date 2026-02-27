@@ -1,0 +1,43 @@
+.source-with-latex {
+  margin-top: 2rem;
+}
+
+.source-with-latex .source-path {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.source-with-latex .source-block {
+  overflow: auto;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 6px;
+  background: var(--md-code-bg-color);
+}
+
+.source-with-latex .source-code {
+  font-family: var(--md-code-font-family);
+  margin: 0;
+  padding: 0.95rem 1rem;
+  line-height: 1.35;
+  font-size: 0.82rem;
+}
+
+.source-with-latex .source-line {
+  display: block;
+  white-space: pre;
+}
+
+.source-with-latex .lineno {
+  display: inline-block;
+  width: 4.2em;
+  margin-right: 0.8em;
+  color: var(--md-default-fg-color--lighter);
+  user-select: none;
+  text-align: right;
+}
+
+.source-with-latex .latex-inline {
+  color: var(--md-accent-fg-color);
+  font-weight: 500;
+}

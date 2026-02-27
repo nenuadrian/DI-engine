@@ -9,8 +9,8 @@ configs=(
     "dizoo/classic_control/pendulum/config/pendulum_vmpo_gtrxl_config.py"
     "dizoo/atari/config/serial/pong/pong_vmpo_gtrxl_config.py"
     "dizoo/atari/config/serial/spaceinvaders/spaceinvaders_vmpo_gtrxl_config.py"
-    "dizoo/atari/config/serial/pong/pong_vmpo_dropout_gtrxl_config.py"
-    "dizoo/atari/config/serial/spaceinvaders/spaceinvaders_vmpo_dropout_gtrxl_config.py"
+    "dizoo/atari/config/serial/pong/pong_vmpo_gtrxl_dropout_config.py"
+    "dizoo/atari/config/serial/spaceinvaders/spaceinvaders_vmpo_gtrxl_dropout_config.py"
 )
 
 if [[ $# -lt 1 ]]; then
@@ -22,7 +22,7 @@ BENCHMARK_SUFFIX="$1"
 WANDB_PROJECT_NAME="minerva-rl-benchmark-${BENCHMARK_SUFFIX}"
 SBATCH_PARTITION="${SBATCH_PARTITION:-gpuA}"
 SBATCH_NTASKS="${SBATCH_NTASKS:-12}"
-SBATCH_TIME="${SBATCH_TIME:-0-6}"
+SBATCH_TIME="${SBATCH_TIME:-0-12}"
 
 benchmark_slug="${BENCHMARK_SUFFIX//\//-}"
 benchmark_slug="${benchmark_slug// /-}"

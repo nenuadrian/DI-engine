@@ -1,7 +1,7 @@
 from easydict import EasyDict
 
 spaceinvaders_vmpo_gtrxl_config = dict(
-    exp_name='spaceinvaders_vmpo_gtrxl_seed0',
+    exp_name='spaceinvaders_vmpo_gtrxl_dropout_seed0',
     env=dict(
         collector_env_num=8,
         evaluator_env_num=8,

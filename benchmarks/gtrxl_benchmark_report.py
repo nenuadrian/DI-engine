@@ -14,7 +14,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 
 ENV_ORDER = ("pendulum", "pong", "spaceinvaders")
-ALGO_ORDER = ("r2d2", "vmpo", "ppo")
+ALGO_ORDER = ("r2d2", "vmpo", "vmpo_dropout", "ppo")
 
 ENV_LABEL = {
     "pendulum": "Pendulum",
@@ -25,6 +25,7 @@ ENV_LABEL = {
 ALGO_LABEL = {
     "r2d2": "R2D2-GTrXL",
     "vmpo": "VMPO-GTrXL",
+    "vmpo_dropout": "VMPO-GTrXL-Dropout",
     "ppo": "PPO-GTrXL",
 }
 
@@ -35,6 +36,8 @@ RUN_SPECS = (
     {"env": "pendulum", "algo": "vmpo", "prefix": "pendulum_vmpo_gtrxl_seed"},
     {"env": "pong", "algo": "vmpo", "prefix": "pong_vmpo_gtrxl_seed"},
     {"env": "spaceinvaders", "algo": "vmpo", "prefix": "spaceinvaders_vmpo_gtrxl_seed"},
+    {"env": "pong", "algo": "vmpo_dropout", "prefix": "pong_vmpo_gtrxl_dropout_seed"},
+    {"env": "spaceinvaders", "algo": "vmpo_dropout", "prefix": "spaceinvaders_vmpo_gtrxl_dropout_seed"},
     {"env": "pendulum", "algo": "ppo", "prefix": "pendulum_ppo_gtrxl_seed"},
     {"env": "pong", "algo": "ppo", "prefix": "pong_ppo_gtrxl_seed"},
     {"env": "spaceinvaders", "algo": "ppo", "prefix": "spaceinvaders_ppo_gtrxl_seed"},
@@ -358,22 +361,21 @@ def build_readme(
     lines.append("")
     lines.append("## Max Score by Algorithm")
     lines.append("")
-    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL | PPO-GTrXL |")
-    lines.append("| --- | ---: | ---: | ---: |")
+    header_algos = " | ".join(ALGO_LABEL[a] for a in ALGO_ORDER)
+    lines.append(f"| Environment | {header_algos} |")
+    lines.append("| --- |" + " ---: |" * len(ALGO_ORDER))
     for env in ENV_ORDER:
-        lines.append(
-            f"| {ENV_LABEL[env]} | {_format_score(max_scores[env]['r2d2'])} | {_format_score(max_scores[env]['vmpo'])} | {_format_score(max_scores[env]['ppo'])} |"
-        )
+        scores = " | ".join(_format_score(max_scores[env].get(a)) for a in ALGO_ORDER)
+        lines.append(f"| {ENV_LABEL[env]} | {scores} |")
 
     lines.append("")
     lines.append("## Iterations to Reach Best Score")
     lines.append("")
-    lines.append("| Environment | R2D2-GTrXL | VMPO-GTrXL | PPO-GTrXL |")
-    lines.append("| --- | ---: | ---: | ---: |")
+    lines.append(f"| Environment | {header_algos} |")
+    lines.append("| --- |" + " ---: |" * len(ALGO_ORDER))
     for env in ENV_ORDER:
-        lines.append(
-            f"| {ENV_LABEL[env]} | {_format_iter(best_iters[env]['r2d2'])} | {_format_iter(best_iters[env]['vmpo'])} | {_format_iter(best_iters[env]['ppo'])} |"
-        )
+        iters = " | ".join(_format_iter(best_iters[env].get(a)) for a in ALGO_ORDER)
+        lines.append(f"| {ENV_LABEL[env]} | {iters} |")
 
     lines.append("")
     lines.append("## Coverage")

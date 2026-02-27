@@ -20,7 +20,7 @@ BENCHMARK_SUFFIX="$1"
 WANDB_PROJECT_NAME="minerva-rl-benchmark-${BENCHMARK_SUFFIX}"
 SBATCH_PARTITION="${SBATCH_PARTITION:-gpuA}"
 SBATCH_NTASKS="${SBATCH_NTASKS:-12}"
-SBATCH_TIME="${SBATCH_TIME:-0-6}"
+SBATCH_TIME="${SBATCH_TIME:-0-12}"
 
 benchmark_slug="${BENCHMARK_SUFFIX//\//-}"
 benchmark_slug="${benchmark_slug// /-}"

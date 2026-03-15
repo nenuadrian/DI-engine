@@ -1,11 +1,5 @@
 # Control Experiments: V-MPO + GTrXL via DI-engine
 
-This document describes the experiment plan for validating V-MPO with GTrXL (Gated Transformer-XL) on control and Atari tasks. These experiments complement the LLM experiments in the TRL fork and provide the "classic RL" evidence for the GEMPI paper.
-
-All scripts generate SBATCH job files in `jobs/`. Submit via `sbatch` on a cluster or run locally with `run_jobs.sh --local`.
-
----
-
 ## 1. Core Benchmark: VMPO vs PPO vs R2D2
 
 **Purpose:** Demonstrate that V-MPO with GTrXL matches or exceeds PPO and R2D2 (off-policy) on standard benchmarks. This validates the GEMPI framework's claim that EM-based methods are competitive with policy gradient methods in the transformer-based control setting.

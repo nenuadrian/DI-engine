@@ -10,7 +10,7 @@ pendulum_ppo_gtrxl_config = dict(
         evaluator_env_num=evaluator_env_num,
         act_scale=True,
         n_evaluator_episode=5,
-        stop_value=-250,
+        stop_value=-200,
     ),
     policy=dict(
         cuda=False,
@@ -86,4 +86,4 @@ create_config = pendulum_ppo_gtrxl_create_config
 if __name__ == "__main__":
     # or you can enter `ding -m serial_onpolicy -c pendulum_ppo_gtrxl_config.py -s 0`
     from ding.entry import serial_pipeline_onpolicy
-    serial_pipeline_onpolicy((main_config, create_config), seed=0)
+    serial_pipeline_onpolicy((main_config, create_config), seed=0, max_env_step=int(1e6))

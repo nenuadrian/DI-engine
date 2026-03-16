@@ -17,7 +17,7 @@ memory_len_r2d2_gtrxl_config = dict(
         model=dict(
             obs_shape=3,
             action_shape=2,
-            memory_len=0,
+            memory_len=64,
             hidden_size=64,
             gru_bias=1.  # gru_bias: 0. to 2.
         ),

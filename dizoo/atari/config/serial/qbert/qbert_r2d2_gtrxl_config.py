@@ -21,7 +21,7 @@ qbert_r2d2_gtrxl_config = dict(
             encoder_hidden_size_list=[128, 256, 1024],
             hidden_size=1024,
             gru_bias=1.,
-            memory_len=0,
+            memory_len=64,
         ),
         discount_factor=0.99,
         burnin_step=0,

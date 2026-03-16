@@ -1,9 +1,18 @@
+import os
+import sys
+
+# Ensure direct script execution resolves local DI-engine sources first.
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, '../../../../..'))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 from easydict import EasyDict
 
 collector_env_num = 8
 evaluator_env_num = 8
 pong_ppo_gtrxl_config = dict(
-    exp_name='pong_ppo_gtrxl_seed0',
+    exp_name='pong_ppo_gtrxl_dropout_seed0',
     env=dict(
         collector_env_num=collector_env_num,
         evaluator_env_num=evaluator_env_num,
@@ -28,7 +37,7 @@ pong_ppo_gtrxl_config = dict(
             att_mlp_num=2,
             att_layer_num=3,
             memory_len=64,
-            dropout=0.0,
+            dropout=0.1,
             gru_gating=True,
             gru_bias=2.0,
             actor_head_hidden_size=1024,
@@ -85,6 +94,6 @@ pong_ppo_gtrxl_create_config = EasyDict(pong_ppo_gtrxl_create_config)
 create_config = pong_ppo_gtrxl_create_config
 
 if __name__ == "__main__":
-    # or you can enter `ding -m serial_onpolicy -c pong_ppo_gtrxl_config.py -s 0`
+    # or you can enter `ding -m serial_onpolicy -c pong_ppo_gtrxl_dropout_config.py -s 0`
     from ding.entry import serial_pipeline_onpolicy
     serial_pipeline_onpolicy((main_config, create_config), seed=0)

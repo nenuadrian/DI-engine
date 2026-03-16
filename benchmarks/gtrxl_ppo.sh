@@ -9,6 +9,8 @@ configs=(
     "dizoo/classic_control/pendulum/config/pendulum_ppo_gtrxl_config.py"
     "dizoo/atari/config/serial/pong/pong_ppo_gtrxl_config.py"
     "dizoo/atari/config/serial/spaceinvaders/spaceinvaders_ppo_gtrxl_config.py"
+    "dizoo/atari/config/serial/pong/pong_ppo_gtrxl_dropout_config.py"
+    "dizoo/atari/config/serial/spaceinvaders/spaceinvaders_ppo_gtrxl_dropout_config.py"
 )
 
 if [[ $# -lt 1 ]]; then
